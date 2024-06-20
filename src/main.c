@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <unistd.h>
 
 #include "vendors/glad/glad.h"
 #include "vendors/GLFW/glfw3.h"
@@ -16,10 +15,7 @@
 float current_radius = 0.1f;
 
 const float gravity = -0.0005f;
-const float bounce_restitution = 0.9f;
-const float velocity_threshold = 0.000001f;
-const float static_friction_coeff = 0.0f;
-const float kinetic_friction_coeff = 0.0f;
+const float bounce_restitution = 0.75f;
 
 GLuint vertex_shader;
 GLuint fragment_shader;
@@ -111,7 +107,7 @@ void apply_constraints (struct Ball* ball) {
         ball->x_vel = -ball->x_vel * bounce_restitution;
     }
 }
-void handle_collisions() {
+void handle_collisions () {
     for (int i = 0; i < amount_balls; i++) {
         for (int j = i + 1; j < amount_balls; j++) {
             float dx = balls[j].x_pos - balls[i].x_pos;
@@ -318,4 +314,3 @@ int main () {
     glfwTerminate();
     return 0;
 }
-
