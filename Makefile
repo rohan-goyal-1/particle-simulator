@@ -12,8 +12,8 @@ particle_sim:
 .PHONY: run all
 
 run: 
-	@$(BUILD_DIR)/$(EXE)
+	$(BUILD_DIR)/$(EXE)
 
 all: 
 	$(CC) $(SOURCE) -o $(BUILD_DIR)/$(EXE) $(INCLUDES) $(LINKERS)
-	@$(BUILD_DIR)/$(EXE)
+	$(BUILD_DIR)/$(EXE)

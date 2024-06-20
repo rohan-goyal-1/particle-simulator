@@ -18,8 +18,8 @@ float current_radius = 0.1f;
 const float gravity = -0.0005f;
 const float bounce_restitution = 0.9f;
 const float velocity_threshold = 0.000001f;
-const float static_friction_coeff = 0.3f;
-const float kinetic_friction_coeff = 0.2f;
+const float static_friction_coeff = 0.0f;
+const float kinetic_friction_coeff = 0.0f;
 
 GLuint vertex_shader;
 GLuint fragment_shader;
@@ -29,8 +29,9 @@ int amount_balls = 0;
 
 struct Ball {
     float radius;
-    float x, y;
-    float vx, vy;
+    float x_pos, y_pos;
+    float x_vel, y_vel;
+    float mass;
 } balls[MAX_OBJECTS];
 
 double mouse_x = 0.0, mouse_y = 0.0;
@@ -57,7 +58,7 @@ void scroll_callback (GLFWwindow* window, double xoffset, double yoffset) {
 }
 
 void add_ball (float x_pos, float y_pos, float radius) {
-    struct Ball new_ball = {radius, x_pos, y_pos, 0.0f, 0.0f};
+    struct Ball new_ball = {radius, x_pos, y_pos, 0.0f, 0.0f, M_PI * radius * radius * radius};
     balls[amount_balls] = new_ball;
     amount_balls++;
 }
@@ -79,88 +80,69 @@ void cursor_position_callback (GLFWwindow* window, double xpos, double ypos) {
     mouse_y = ypos;
 }
 
-void apply_gravity (struct Ball* ball) {
-    ball->vy += gravity;
-    ball->y += ball->vy;
+void update_ball (struct Ball* ball) {
+    ball->y_vel += gravity;
+    ball->x_pos += ball->x_vel;
+    ball->y_pos += ball->y_vel;
 }
 
 void apply_constraints (struct Ball* ball) {
     float bottom_limit = -1.0f + ball->radius;
-    if (ball->y < bottom_limit) {
-        ball->y = bottom_limit;
-        ball->vy = -ball->vy * bounce_restitution;
+    if (ball->y_pos < bottom_limit) {
+        ball->y_pos = bottom_limit;
+        ball->y_vel = -ball->y_vel * bounce_restitution;
     }
 
     float top_limit = 1.0f - ball->radius;
-    if (ball->y > top_limit) {
-        ball->y = top_limit;
-        ball->vy = -ball->vy * bounce_restitution;
+    if (ball->y_pos > top_limit) {
+        ball->y_pos = top_limit;
+        ball->y_vel = -ball->y_vel * bounce_restitution;
     }
 
     float left_limit = -1.0f + ball->radius;
-    if (ball->x < bottom_limit) {
-        ball->x = bottom_limit;
-        ball->vx = -ball->vx * bounce_restitution;
+    if (ball->x_pos < bottom_limit) {
+        ball->x_pos = bottom_limit;
+        ball->x_vel = -ball->x_vel * bounce_restitution;
     }
 
     float right_limit = 1.0f - ball->radius;
-    if (ball->x > top_limit) {
-        ball->x = top_limit;
-        ball->vx = -ball->vx * bounce_restitution;
+    if (ball->x_pos > top_limit) {
+        ball->x_pos = top_limit;
+        ball->x_vel = -ball->x_vel * bounce_restitution;
     }
 }
-
-void handle_collisions () {
+void handle_collisions() {
     for (int i = 0; i < amount_balls; i++) {
         for (int j = i + 1; j < amount_balls; j++) {
-            float dx = balls[j].x - balls[i].x;
-            float dy = balls[j].y - balls[i].y;
-            float distance = sqrt(dx * dx + dy * dy);
+            float dx = balls[j].x_pos - balls[i].x_pos;
+            float dy = balls[j].y_pos - balls[i].y_pos;
+            float distance_squared = dx * dx + dy * dy;
             float radius_sum = balls[i].radius + balls[j].radius;
 
-            if (distance < radius_sum) {
-                float overlap = radius_sum - distance;
+            if (distance_squared <= (radius_sum * radius_sum)) {
+                float distance = sqrt(distance_squared);
 
-                float nx = dx / distance;
-                float ny = dy / distance;
-
-                float displacement_i = overlap * (balls[j].radius / radius_sum);
-                float displacement_j = overlap * (balls[i].radius / radius_sum);
-
-                balls[i].x -= nx * displacement_i;
-                balls[i].y -= ny * displacement_i;
-                balls[j].x += nx * displacement_j;
-                balls[j].y += ny * displacement_j;
-
-                float vx_rel = balls[j].vx - balls[i].vx;
-                float vy_rel = balls[j].vy - balls[i].vy;
-
-                float vn_rel = vx_rel * nx + vy_rel * ny;
-
-                float mass_i = M_PI * balls[i].radius * balls[i].radius;
-                float mass_j = M_PI * balls[j].radius * balls[j].radius;
-                float combined_mass = mass_i + mass_j;
-
-                float new_vx_i = (balls[i].vx * (mass_i - mass_j) + 2 * mass_j * balls[j].vx) / combined_mass;
-                float new_vy_i = (balls[i].vy * (mass_i - mass_j) + 2 * mass_j * balls[j].vy) / combined_mass;
-                float new_vx_j = (balls[j].vx * (mass_j - mass_i) + 2 * mass_i * balls[i].vx) / combined_mass;
-                float new_vy_j = (balls[j].vy * (mass_j - mass_i) + 2 * mass_i * balls[i].vy) / combined_mass;
-
-                float friction_force = 0.0f;
-                if (fabs(vn_rel) < velocity_threshold) {
-                    friction_force = static_friction_coeff * fabs(vn_rel);
-                } 
-                else {
-                    friction_force = kinetic_friction_coeff * fabs(vn_rel);
+                if (distance == 0.0f) {
+                    distance = 0.1f;
                 }
 
-                float vx_friction = friction_force * nx;
-                float vy_friction = friction_force * ny;
+                float overlap = radius_sum - distance;
+                float nx = dx / distance;
+                float ny = dy / distance;
+                float displacement_i = overlap * (balls[j].radius / radius_sum);
+                float displacement_j = overlap * (balls[i].radius / radius_sum);
+                balls[i].x_pos -= nx * displacement_i;
+                balls[i].y_pos -= ny * displacement_i;
+                balls[j].x_pos += nx * displacement_j;
+                balls[j].y_pos += ny * displacement_j;
 
-                balls[i].vx = new_vx_i - vx_friction * (1 / mass_i);
-                balls[i].vy = new_vy_i - vy_friction * (1 / mass_i);
-                balls[j].vx = new_vx_j + vx_friction * (1 / mass_j);
-                balls[j].vy = new_vy_j + vy_friction * (1 / mass_j);
+                float nx_total = nx * (balls[i].x_vel - balls[j].x_vel) + ny * (balls[i].y_vel - balls[j].y_vel);
+                float p = 2.0f * nx_total / (balls[i].mass + balls[j].mass);
+
+                balls[i].x_vel -= p * balls[j].mass * nx;
+                balls[i].y_vel -= p * balls[j].mass * ny;
+                balls[j].x_vel += p * balls[i].mass * nx;
+                balls[j].y_vel += p * balls[i].mass * ny;
             }
         }
     }
@@ -316,14 +298,14 @@ int main () {
 
         draw_outline(VBO, VAO, outline_shader_program);
 
+        handle_collisions();
+
         for (int i = 0; i < amount_balls; i++) {
             GLfloat vertices[(NUM_CIRCLE_SEGMENTS + 2) * 3];
-            apply_gravity(&balls[i]);
-            build_circle(vertices, balls[i].x, balls[i].y, balls[i].radius);
+            update_ball(&balls[i]);
+            build_circle(vertices, balls[i].x_pos, balls[i].y_pos, balls[i].radius);
             draw_circle(vertices, VBO, VAO, shader_program);
         }
-
-        handle_collisions();
 
         for (int i = 0; i < amount_balls; i++) {
             apply_constraints(&balls[i]);
