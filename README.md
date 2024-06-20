@@ -2,6 +2,8 @@
 
 This project is an interactive particle simulation implemented using OpenGL. It simulates bouncing balls influenced by gravity, with interactions including collisions and user-controlled ball creation.
 
+This was meant to be an intro project for graphics in C/C++.
+
 ## Features
 
 + Interactive Simulation: Create bouncing balls by clicking on the screen.

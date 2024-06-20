@@ -10,9 +10,9 @@
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 800
 #define NUM_CIRCLE_SEGMENTS 100
-#define MAX_OBJECTS 100
+#define MAX_OBJECTS 1000
 
-float current_radius = 0.1f;
+float current_radius = 0.01f;
 
 const float gravity = -0.0005f;
 const float bounce_restitution = 0.75f;
@@ -61,11 +61,8 @@ void add_ball (float x_pos, float y_pos, float radius) {
 
 void mouse_button_callback (GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        double x_pos, y_pos;
-        glfwGetCursorPos(window, &x_pos, &y_pos);
-
-        x_pos = (x_pos / WINDOW_WIDTH) * 2.0 - 1.0;
-        y_pos = 1.0 - (y_pos / WINDOW_HEIGHT) * 2.0;
+        float x_pos = (mouse_x / WINDOW_WIDTH) * 2.0 - 1.0;
+        float y_pos = 1.0 - (mouse_y / WINDOW_HEIGHT) * 2.0;
 
         add_ball(x_pos, y_pos, current_radius);
     }
@@ -156,8 +153,11 @@ void draw_outline (GLuint VBO, GLuint VAO, GLuint outline_shader_program) {
     GLfloat outline_vertices[(NUM_CIRCLE_SEGMENTS + 2) * 3];
     double x_pos = (mouse_x / WINDOW_WIDTH) * 2.0 - 1.0;
     double y_pos = 1.0 - (mouse_y / WINDOW_HEIGHT) * 2.0;
-    build_circle(outline_vertices, x_pos, y_pos, current_radius);
-    draw_circle(outline_vertices, VBO, VAO, outline_shader_program);
+    if (x_pos <= 1.0f && x_pos >= -1 && y_pos >= -1 && y_pos <= 1) {
+        build_circle(outline_vertices, x_pos, y_pos, current_radius);
+        draw_circle(outline_vertices, VBO, VAO, outline_shader_program);
+        // add_ball(x_pos, y_pos, current_radius);
+    }
 }
 
 char* read_file (const char* filename) {
